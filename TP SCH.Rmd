@@ -2,18 +2,27 @@
 title: "TP Séries chronologiques"
 author: "Laurent LIN & Guillaume SHI"
 date: "24/02/2019"
-output: pdf_document
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
 require(knitr)
 opts_chunk$set(tidy.opts=list(width.cutoff=65), tidy=TRUE)
 
-setwd("/Users/guillaumeshi/Desktop/OMA/SCH/")
+rm(list = ls())
+
+# setwd("/Users/guillaumeshi/Desktop/OMA/SCH/")
+setwd("/Users/LL/Documents/Centrale/GTA/OMA/SCH/DM/SCH")
 library("forecast")
 library("strucchange")
 library("data.table")
+library(lmtest)
 ```
+
+# Partie 1 : Estimation du modèle
 
 ## Question 1
 
@@ -22,7 +31,8 @@ L'earning yield est défini comme étant le rapport entre l'earning et le prix d
 
 A première vue, on pourrait dégager une tendance linéaire avec une droite passant par 0.06 pour un taux à 2% et par 0.035 pour un taux à 6%, soit l'équation linéaire pour la régression : $y = -0.00625x + 0.0675$.
 ```{r}
-data <- fread("/Users/guillaumeshi/Desktop/OMA/SCH/0219_td_centrale.csv", header=TRUE)
+# data <- fread("/Users/guillaumeshi/Desktop/OMA/SCH/0219_td_centrale.csv", header=TRUE)
+data <- fread("0219_td_centrale.csv", header=TRUE)
 data$yield <- data$earnings / data$price
 
 plot(data$rates, data$yield, xlab="Taux", ylab="Yield",
@@ -34,7 +44,7 @@ abline(0.0675, -0.00625, col="red", lwd=2)
 ## Question 2
 
 
-On considère la régression linéaire du vecteur des variables d'intérêt $\mathbf{y}$ en fonction du vecteur des variables explicatives $\mathbf{X}$ : il s'agit de trouver le vecteur $\boldsymbol{\gamma}$ tel que $\mathbf{y} = \mathbf{X}^T\boldsymbol{\gamma} + \boldsymbol{\epsilon}$ où $\boldsymbol{\epsilon}$ représente un bruit blanc. L'hypothèse sous-jacente est donc que $\mathbb{E}(\boldsymbol{\epsilon}) = \boldsymbol{0}$ et $\mathbb{E}(\boldsymbol{\epsilon}\boldsymbol{\epsilon}^T) = \sigma I_n$ avec $\sigma$ constante. \
+On considère la régression linéaire du vecteur des variables d'intérêt $\mathbf{y}$ en fonction du vecteur des variables explicatives $\mathbf{X}$ : il s'agit de trouver le vecteur $\boldsymbol{\gamma}$ tel que $\mathbf{y} = \mathbf{X}^T\boldsymbol{\gamma} + \boldsymbol{\epsilon}$ où $\boldsymbol{\epsilon}$ représente un bruit blanc. L'hypothèse sous-jacente est donc que $\mathbb{E}(\boldsymbol{\epsilon}) = \boldsymbol{0}$ et $\mathbb{E}(\boldsymbol{\epsilon}\boldsymbol{\epsilon}^T) = \sigma I_n$ avec $\sigma$ constante (décorrélation et homoscédasticité) \
 
 
 La méthode des moindres carrés ordinaires (MCO) consiste à trouver le vecteur $\boldsymbol{\gamma}$ par minimisation de la quantité suivante : $\Delta = (\mathbf{y} - \mathbf{X}\boldsymbol{\gamma})^2$. Ce problème de minimisation se résout en dérivant la quantité $\Delta$ par rapport à chacune des composantes de $\boldsymbol{\gamma}$ et en écrivant que la quantité obtenue est nulle : $$\forall 1\leq i \leq n, \frac{\partial \Delta}{\partial \boldsymbol{\gamma}_i} = 0$$
@@ -45,22 +55,93 @@ La méthode des moindres carrés ordinaires (MCO) consiste à trouver le vecteur
 On garde les notations de la question précédente. Ici, on souhaite calibrer $\boldsymbol{\gamma}  = ( \alpha \ \ \beta)^T$ afin d'avoir une relation du type $\mathbf{y} = \frac{E_t}{P_t} = \mathbf{X}^T\boldsymbol{\gamma}$ si $\mathbf{X} = (1 \ \ r_t)^T$ désigne le vecteur des variables explicatives. Etant en présence de variables aléatoires, la quantité à minimiser est $$\mathbb{E}((\frac{E_t}{P_t} - (\alpha + \beta r_t))^2) = \mathbb{E}(\frac{E_t}{P_t}) - 2\mathbb{E}(\frac{E_t}{P_t}(\alpha + \beta r_t)) + \mathbb{E}((\alpha + \beta r_t)^2) = \Delta$$ 
 
 
-- En dérivant par rapport à la première composante de $\boldsymbol{\gamma}$, c'est-à-dire $\alpha$, on trouve $$-2\mathbb{E}(\frac{E_t}{P_t}) + 2\mathbb{E}(\alpha + \beta r_t) = 0$$ soit $\alpha = \mathbb{E}(\frac{E_t}{P_t}) - \beta \mathbb{E}(r_t)$, ou encore $$\hat{\alpha} = \overline{(\frac{E}{P})} - \hat{\beta} \overline{r}$$ en prenant la moyenne empirique des earning yields $\overline{(\frac{E}{P})}$ comme estimateur de $\mathbb{E}(\frac{E_t}{P_t})$ et $\overline{r}$ pour $\mathbb{E}(r_t)$. \
+- En dérivant par rapport à la première composante de $\boldsymbol{\gamma}$, c'est-à-dire $\alpha$, on trouve $$-2\mathbb{E}(\frac{E_t}{P_t}) + 2\mathbb{E}(\alpha + \beta r_t) = 0$$ soit $\alpha = \mathbb{E}(\frac{E_t}{P_t}) - \beta \mathbb{E}(r_t)$, ou encore $$\widehat{\alpha} = \overline{(\frac{E}{P})} - \widehat{\beta} \overline{r}$$ en prenant la moyenne empirique des earning yields $\overline{(\frac{E}{P})}$ comme estimateur de $\mathbb{E}(\frac{E_t}{P_t})$ et $\overline{r}$ pour $\mathbb{E}(r_t)$. \
 
 
 - La dérivation par rapport à la seconde composante, $\beta$, donne $$-2 \mathbb{E}(\frac{E_t}{P_t}r_t) + 2\mathbb{E}(r_t(\alpha + \beta r_t)) = 0 = - \mathbb{E}(\frac{E_t}{P_t}r_t) + \alpha \mathbb{E}(r_t) + \beta \mathbb{E}(r_t^2)$$ soit encore en substituant à $\alpha$ sa valeur en fonction de $\beta$ trouvée précédemment :
 
-$$- \mathbb{E}(\frac{E_t}{P_t}r_t) + \mathbb{E}(r_t)(\mathbb{E}(\frac{E_t}{P_t}) - \beta \mathbb{E}(r_t)) + \beta \mathbb{E}(r_t^2) = 0$$ d'où $$-\mathbb{E}(\frac{E_t}{P_t}r_t) + \mathbb{E}(\frac{E_t}{P_t})\mathbb{E}(r_t) - \beta \mathbb{E}(r_t)^2 + \beta \mathbb{E}(r_t^2) = 0 = -Cov(\frac{E_t}{P_t}, r_t) + \beta Var(r_t)$$ d'où l'on tire ainsi $$\hat{\beta} = \frac{Cov(\frac{E}{P}, r)}{\sigma_r^2}$$
+$$- \mathbb{E}(\frac{E_t}{P_t}r_t) + \mathbb{E}(r_t)(\mathbb{E}(\frac{E_t}{P_t}) - \beta \mathbb{E}(r_t)) + \beta \mathbb{E}(r_t^2) = 0$$ d'où $$-\mathbb{E}(\frac{E_t}{P_t}r_t) + \mathbb{E}(\frac{E_t}{P_t})\mathbb{E}(r_t) - \beta \mathbb{E}(r_t)^2 + \beta \mathbb{E}(r_t^2) = 0 = -Cov(\frac{E_t}{P_t}, r_t) + \beta Var(r_t)$$ d'où l'on tire ainsi $$\widehat{\beta} = \frac{Cov(\frac{E}{P}, r)}{\sigma_r^2}$$
 
+Montrons que $\lim_{T \rightarrow \infty} \mathrm{Var}(\hat{\beta})= 0$
+
+- Pour calculer $\widehat{\beta}$, il faut utiliser les estimateurs empiriques des fonctions de la moyenne ($\widehat{x} = \frac{1}{T+1}\sum_{t=0}^{T} x_i$), la variance et de la covariance, ce qui donne : $\widehat{\beta} = \frac{\sum_{t=0}^{T} (r_t - \bar{r})(\frac{E_t}{P_t} - \overline{(\frac{E_t}{P_t})})}{\sum_{t=0}^{T} (r_t - \bar{r})^2}$.
+
+- En injectant l'équation (2) décrivant le modèle vérifié par les données, on obtient :
+$\mathrm{Var}(\widehat{\beta}) = \mathrm{Var}(\frac{\sum_{t=0}^{T} (r_t - \bar{r})(\alpha + \beta r_t + \epsilon_t - \overline{(\frac{E_t}{P_t})})}{\sum_{t=0}^{T} (r_t - \bar{r})^2})$
+
+- On remarque qu'au numérateur, les $\epsilon_t$ sont les seules variables aléatoires, le reste peut être supprimé de la variance, on obtient donc : $\mathrm{Var}(\widehat{\beta}) = \mathrm{Var}( \frac{\sum_{t=0}^{T} (r_t - \bar{r})\epsilon_t}{\sum_{t=0}^{T} (r_t - \bar{r})^2} )$
+
+- Par hypothèse, les $\epsilon_t$ sont i.i.d. donc on obtient finalement :
+$$\mathrm{Var}(\widehat{\beta}) 
+= \sum_{t=0}^{T} \mathrm{Var}(\frac{ (r_t - \hat{r})\epsilon_t}{\sum_{t=0}^{T} (r_t - \bar{r})^2}) 
+= \frac{\sum_{t=0}^{T} (r_t - \bar{r})^2 \mathrm{Var}(\epsilon_t)}{(\sum_{t=0}^{T} (r_t - \bar{r})^2)^2}
+= \sigma_{\epsilon}^2 \frac{\sum_{t=0}^{T} (r_t - \bar{r})^2}{(\sum_{t=0}^{T} (r_t - \bar{r})^2)^2}
+= \frac{\sigma_{\epsilon}^2}{\sum_{t=0}^{T} (r_t - \bar{r})^2}
+$$
+
+- Comme le dénominateur est une somme de termes positifs, donc lorsque $T \rightarrow \infty$, $\sum_{t=0}^{T} (r_t - \bar{r})^2 \rightarrow \infty$ et donc  $\lim_{T \rightarrow \infty} \mathrm{Var}(\hat{\beta})= 0$
+
+## Question 4 : interprétation des résultats de l'estimateur des MCO
+
+*A l'aide la fonction "lm" du logiciel R, estimer par les MCO les coeffi􏰧cients de l'équation 2. Commenter vos résultats en particulier le signe du coeffi􏰧cient et sa signi􏰥cativité. Qu'indiquent les statistiques de Student et de Fisher ainsi que le coeffi􏰧cient de détermination ?*
 
 ```{r}
 fit = lm(data$yield ~ data$rates)
 summary(fit)
 ```
 
+- $\widehat{\beta} = -0.0036653$ est de signe négatif, ce qui signifie que le earning yield diminue avec l'augmentation du ratetaux sans risqu $\widehat{\alpha} = 0.0586936$ est (l'`intercept`) de signe positif, cela signifie que le earning yield vaut 0.0586936
 
-Le $R^2 = 0.14$ n'est pas très bon... La statistique de Student pour l'ordonnée à l'origine et le coefficient directeur donnent des p-values très petites, on a donc significativité à tous les niveaux de confiance usuels. La statistique de Fisher est de 39.66, d'où une p-valeur très basse elle aussi, on a aussi significativité.
+-  lorsque le taux sans risque est nul.La statistique de Student (`t-value`) est un critère qui permet de juger sur l'hypothèse nulle suivante : H0 = {le coefficient considéré vaut 0}. On peut alors observer la p-value associée (`Pr(>|t|)`) : ici, sa valeur vaut `2.94e-08` et epour $\widehat{\beta}$ et `< 2e-16` pour $\widehat{\alpha}$ st donc inférieur aux seuils de significativité classiques (0.1%, 1%, 5% etc.), nous pouvons rejeter H0 et donc dire que le ccesfficient ests songnificativement différent de s0.
+  
+- Le F-test considère l'hypothèse nulle suivante : H0 = {les coefficients (autre que l'`intercept`) valent tous 0}, il s'agit d'une comparaison avec le modèle constitué uniquement d'une estimation de l'`intercept` ie l'ordonnée à l'origine. La p-value associée à la statistique de Fisher valant `2.944e-08`, elle est inférieure aux seuils de c'est-à-dire qu'au moins une variable n'est pas significativement différente de significativité classiques (0.1%, 1%, 5% etc.) donc on peut rejeter cette hypothèse nulle, ie que le modèle dans l'ensemble est significatif.  On peut remarquer que comme il n'y a qu'une seule variable autre que l'ordonnée à l'origine, la p-valeur de la F-stat est la même que celle de la statistique de Student.
 
+Le coefficient de détermination `R-s$R^2$ (quared = 0.1229` et )le coefficient de détermination ajusté `Adj(usted R-squared = 0.1191` son)t tous les deux très faibles, indiquant que seulement une faible part d'environ 12% de la variable en question `\frac{E_t}{P_t}` est expliquée par le modèle, donc la qualité de la régression est médiocre.
+
+## Question 5 - Résidus estimés
+Réaliser un étude complète des résidus estimés : tracer leur densité, étudier leur normalité et vérifi􏰥er l'existence/l'absence d'autocorrélation et d'hétéscédasticité.
+
+Normalité des résidus du modèle :
+En visualisant la densité des résidus, nous voyons que celle-ci n'a pas la forme de cloche symétrique que possède une distribution normale classique. Cette idée est confirmée par le graphe quantile-quantile (qq-plot) avec : nous voyons que les points s'éloignent en queue de distribution. Le test de Shapiro-Wilk est effectué avec comme hypothèse nulle H0 = {l'échantillon est issu d'une population normalement distribué}, la p-valeur associée étant de ` 1.233e-07 < 0.05`, nous pouvons rejeter H0 : il est probable que les données ne soient pas issues d'une population normalement distribuée.
+
+```{r}
+plot(density(resid(fit)))
+qqnorm(resid(fit))
+qqline(resid(fit))
+
+shapiro.test(resid(fit))
+```
+
+Autocorrélation des résidus
+En observant la fonction d'autocorrélation sur la série des résidus, on constate qu'il y a existence d'autocorrélation : la fonction d'autocorrélation prend des valeurs positives importantes (>0.2 en valeur absolue) pour des lags allant de 1 à 14 jours. Cela signifie que le modèle n'est pas optimal car les résidus peuvent être utilisés pour prédire les prochains résidus : il y a de l'information qui échappe au modèle actuel.
+
+```{r}
+plot(resid(fit), main="Evolution des résidus", xlab="date", ylab="résidu",)
+acf(resid(fit))
+```
+
+Hétéroscédasticité des résidus
+L'observation sur les résidus nous fait penser que ceux-ci sont hétéroscédastiques : la variance des résidus a augmenté puis diminué au cours du temps. Le test de Breusch-Pagan donne une p-valeur de `0.1577`, on peut rejeter l'hypothèse nulle H0 = {les données sont homoscédastiques} avec un seuil de confiance de 20%, ce qui est plutôt élevé comparé à tous les autres seuils de confiance obtenus précédemment.
+
+
+```{r}
+# gqtest(fit, alternative = "two.sided")
+bptest(fit)
+# bptest(fit, ~rates, data=data)
+# ncvTest(fit)
+```
+
+Conclusion : Outre le fait que le modèle ait un coefficient de détermination faible, l'étude des résidus a montré que ces derniers ne suivent pas une distribution normale, il y a présence d'autocorrélation et d'hétéroscédasticité, modéliser le earning yield en utilisant uniquement le taux sans risque ne permet pas d'avoir une modélisation où les hypothèses sous-jacente de l'esimateutr des MCO ne sont respectées, il faudrait améliorer le modèle.
+
+# Partie 2: Estimation d'une nouvelle spéci􏰥cation et comparaison
+
+## Question 6
+*Calculer le taux d'intérêt réel. Estimer par la méthode des moindres carrés ordinaires cette nouvelle spéci􏰥cation. Améliore-t-elle le pouvoir explicatif du modèle? Justi􏰥er votre réponse.*
+
+Le taux d'intérêt réel est calculé par en utilisant l'indice des prix à la consommation (CPI) sur 12 mois de la façon suivante : 
+$$\pi_t = 100 \frac{cpi_t - cpi_{t-12}}{cpi_{t-12}}$$
+On omet donc les 12 premiers mois pour pour la construction du modèle Fed corrigé : 
+$$\frac{E_t}{P_t} = \alpha + \beta (r_t - \pi_t) + \epsilon_t$$
 
 ```{r}
 inflation = 100*(data$cpi[-(1:12)] / data$cpi[1:(length(data$cpi) - 12)] - 1)  # retrouver l'inflation à partir du CPI
@@ -80,8 +161,22 @@ plot(data$real_rates, data$yield, xlab="Taux", ylab="Yield",
 abline(0.050445, -0.0062351, col="deeppink", lwd=2)
 ```
 
+Concernant le pouvoir explicatif du modèle : 
++ Le coefficient de détermination $R^2$ est de à présent 0.39, ce qui est une amélioration nette par rapport à précédemment où il était de 0.14.
++ Toutefois, une analyse plus poussée des résidus montre que les résidus ne suivent toujours pas une distribution normale, ni décorrélés, ni homoscédastiques La fonction de densité présentent deux pics, les points en queue de distribution qui s'éloignent de la valeur théorique du diagramme quantile-quantile et le test de Shapiro-Wilk présente une p-valeur très faible de `0.004569` permettant de rejeter l'hypothèse nulle que les données suivent une distribution normale. La fonction d'autocorrélation montre que les résidus ne sont pas décorrélés. Le test de Breusch-Pagan donne une p-valeur de `0.7441` donc nous ne pouvons pas conclure sur l'homoscédasticité des résidus. 
 
-Le $R^2$ est de 0.39, ce qui est une amélioration nette par rapport à précédemment où il était de 0.14.
+L'amélioration du pouvoir explicatif du modèle se traduit alors uniquement par un meilleur coefficient de détermination, le modèle linéaire choisi ne permet pas d'obtenir des résidus conformes aux hypothèses de modélisation du modèle MCO.
+
+```{r}
+plot(resid(fit2), main="Evolution des residus", xlab="date", ylab="résidu")
+plot(density(resid(fit2)))
+qqnorm(resid(fit2))
+qqline(resid(fit2))
+shapiro.test(resid(fit2))
+acf(resid(fit2))
+bptest(fit2)
+
+```
 
 ## Question 7
 
