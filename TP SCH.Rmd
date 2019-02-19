@@ -1,0 +1,277 @@
+---
+title: "TP Séries chronologiques"
+author: "Laurent LIN & Guillaume SHI"
+date: "24/02/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+require(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=65), tidy=TRUE)
+
+setwd("/Users/guillaumeshi/Desktop/OMA/SCH")
+library("forecast")
+library("strucchange")
+library("data.table")
+```
+
+## Question 1
+
+L'earning yield est défini comme étant le rapport entre l'earning et le prix d'une action. \
+
+
+A première vue, on pourrait dégager une tendance linéaire avec une droite passant par 0.06 pour un taux à 2% et par 0.035 pour un taux à 6%, soit l'équation linéaire pour la régression : $y = -0.00625x + 0.0675$.
+```{r}
+data <- fread("0219_td_centrale.csv", header=TRUE)
+data$yield <- data$earnings / data$price
+
+plot(data$rates, data$yield, xlab="Taux", ylab="Yield",
+     main="Yield en fonction du taux")
+abline(0.0675, -0.00625, col="red", lwd=2)
+```
+
+
+## Question 2
+
+
+On considère la régression linéaire du vecteur des variables d'intérêt $\mathbf{y}$ en fonction du vecteur des variables explicatives $\mathbf{X}$ : il s'agit de trouver le vecteur $\boldsymbol{\gamma}$ tel que $\mathbf{y} = \mathbf{X}^T\boldsymbol{\gamma} + \boldsymbol{\epsilon}$ où $\boldsymbol{\epsilon}$ représente un bruit blanc. L'hypothèse sous-jacente est donc que $\mathbb{E}(\boldsymbol{\epsilon}) = \boldsymbol{0}$ et $\mathbb{E}(\boldsymbol{\epsilon}\boldsymbol{\epsilon}^T) = \sigma I_n$ avec $\sigma$ constante. \
+
+
+La méthode des moindres carrés ordinaires (MCO) consiste à trouver le vecteur $\boldsymbol{\gamma}$ par minimisation de la quantité suivante : $\Delta = (\mathbf{y} - \mathbf{X}\boldsymbol{\gamma})^2$. Ce problème de minimisation se résout en dérivant la quantité $\Delta$ par rapport à chacune des composantes de $\boldsymbol{\gamma}$ et en écrivant que la quantité obtenue est nulle : $$\forall 1\leq i \leq n, \frac{\partial \Delta}{\partial \boldsymbol{\gamma}_i} = 0$$
+
+## Question 3
+
+
+On garde les notations de la question précédente. Ici, on souhaite calibrer $\boldsymbol{\gamma}  = ( \alpha \ \ \beta)^T$ afin d'avoir une relation du type $\mathbf{y} = \frac{E_t}{P_t} = \mathbf{X}^T\boldsymbol{\gamma}$ si $\mathbf{X} = (1 \ \ r_t)^T$ désigne le vecteur des variables explicatives. Etant en présence de variables aléatoires, la quantité à minimiser est $$\mathbb{E}((\frac{E_t}{P_t} - (\alpha + \beta r_t))^2) = \mathbb{E}(\frac{E_t}{P_t}) - 2\mathbb{E}(\frac{E_t}{P_t}(\alpha + \beta r_t)) + \mathbb{E}((\alpha + \beta r_t)^2) = \Delta$$ 
+
+
+- En dérivant par rapport à la première composante de $\boldsymbol{\gamma}$, c'est-à-dire $\alpha$, on trouve $$-2\mathbb{E}(\frac{E_t}{P_t}) + 2\mathbb{E}(\alpha + \beta r_t) = 0$$ soit $\alpha = \mathbb{E}(\frac{E_t}{P_t}) - \beta \mathbb{E}(r_t)$, ou encore $$\hat{\alpha} = \overline{(\frac{E}{P})} - \hat{\beta} \overline{r}$$ en prenant la moyenne empirique des earning yields $\overline{(\frac{E}{P})}$ comme estimateur de $\mathbb{E}(\frac{E_t}{P_t})$ et $\overline{r}$ pour $\mathbb{E}(r_t)$. \
+
+
+- La dérivation par rapport à la seconde composante, $\beta$, donne $$-2 \mathbb{E}(\frac{E_t}{P_t}r_t) + 2\mathbb{E}(r_t(\alpha + \beta r_t)) = 0 = - \mathbb{E}(\frac{E_t}{P_t}r_t) + \alpha \mathbb{E}(r_t) + \beta \mathbb{E}(r_t^2)$$ soit encore en substituant à $\alpha$ sa valeur en fonction de $\beta$ trouvée précédemment :
+
+$$- \mathbb{E}(\frac{E_t}{P_t}r_t) + \mathbb{E}(r_t)(\mathbb{E}(\frac{E_t}{P_t}) - \beta \mathbb{E}(r_t)) + \beta \mathbb{E}(r_t^2) = 0$$ d'où $$-\mathbb{E}(\frac{E_t}{P_t}r_t) + \mathbb{E}(\frac{E_t}{P_t})\mathbb{E}(r_t) - \beta \mathbb{E}(r_t)^2 + \beta \mathbb{E}(r_t^2) = 0 = -Cov(\frac{E_t}{P_t}, r_t) + \beta Var(r_t)$$ d'où l'on tire ainsi $$\hat{\beta} = \frac{Cov(\frac{E}{P}, r)}{\sigma_r^2}$$
+
+
+```{r}
+fit = lm(data$yield ~ data$rates)
+summary(fit)
+```
+
+
+Le $R^2 = 0.14$ n'est pas très bon... La statistique de Student pour l'ordonnée à l'origine et le coefficient directeur donnent des p-values très petites, on a donc significativité à tous les niveaux de confiance usuels. La statistique de Fisher est de 39.66, d'où une p-valeur très basse elle aussi, on a aussi significativité.
+
+
+```{r}
+inflation = 100*(data$cpi[-(1:12)] / data$cpi[1:(length(data$cpi) - 12)] - 1)  # retrouver l'inflation à partir du CPI
+
+data = data[-(1:12),]
+
+data$inflation = inflation
+
+data$real_rates = data$rates - data$inflation
+
+fit2 = lm(data$yield ~ data$real_rates)
+
+summary(fit2)
+
+plot(data$real_rates, data$yield, xlab="Taux", ylab="Yield",
+     main="Yield en fonction du taux")
+abline(0.050445, -0.0062351, col="deeppink", lwd=2)
+```
+
+
+Le $R^2$ est de 0.39, ce qui est une amélioration nette par rapport à précédemment où il était de 0.14.
+
+## Question 7
+
+Le modèle ARMA est un modèle mathématique visant à modéliser le comportement d'une série temporelle en fonction de ses valeurs historiques (c'est la partie autorégressive –AR– du modèle) mais aussi en fonction d'un bruit blanc qui viendrait perturber les données (d'où une moyenne mobile dans le modèle –MA–), dans le but de prédire les valeurs que prendrait la série temporelle dans le futur. \
+
+Pour une variable représentée par une série temporelle, on introduit généralement les ordres p et q et on parle d'un modèle ARMA(p,q) pour modéliser une valeur au temps t à partir des p valeurs précédentes et de q bruits blancs indépendants et identiquement distribués : $$X_t = \phi_1X_{t-1} + ... + \phi_pX_{t-p} + \epsilon_t + \theta_1 \epsilon_{t-1} + ... + \theta_q \epsilon_{t-q} $$
+
+## Question 8
+
+### Première approche
+
+La première approche serait de regarder la fonction d'autocorrélation ainsi que la fonction d'autocorrélation partielle. En effet, celles-ci donnent des informations sur les ordres q et p respectivement du modèle que l'on pourrait utiliser pour modéliser la série temporelle des yields.
+
+
+```{r}
+acf(data$yield)  # fonction d'autocorrélation
+
+pacf(data$yield)  # fonction d'autocorrélation partielle
+```
+
+La fonction d'autocorrélation sur le premier graphe ne nous apprend pas grand-chose sur la dépendance entre $X_t$ et d'éventuels bruits blancs car pratiquement tous les pics sont hors de la zone délimitée par les bandes bleues en pointillés. Les pics dans cette zone peuvent être considérés comme nuls. Or, on voit que les pics sont très au-delà de cette zone, et ceci pour des lags jusqu'à environ 19 : on ne peut donc pas présumer de la valeur de q. \
+
+
+En revanche, à l'aide de la fonction d'autocorrélation partielle présentée sur le second graphe, on observe que deux pics ne se situent pas entre les pontillés bleus : ceux qui correspondent à un lag de 1 et à un lag de 2. On a donc deux pics qui se distringuent, et **on peut ainsi supposer que l'ordre pour la partie autorégressive du modèle, p, vaut 2**. \
+
+
+On a considéré que le pic du lag à 12 était nul bien qu'il reflète une saisonnalité des données : la valeur du yield présente une certaine corrélation par rapport à sa valeur il y a 12 mois. Néanmoins, pour des raisons de simplicité, on ne traite pas cette corrélation. \
+
+
+### Deuxième approche
+
+
+La seconde approche serait une approche "force brute" : on teste toutes les combinaisons possibles de p et q (pour p et q entiers inférieurs à une valeur limite, typiquement 4), et on regarde quels modèles permettent de mieux modéliser les données empiriques, via la fonction ```arima``` par exemple. Pour cela, on s'attache à regarder des critères d'information tels que l'AIC (Akaike Information Criteria) ou le BIC (Bayesian Information Criteria) qui donnent une estimation de la qualité du modèle fitté. Ces critères font une sorte de compromis entre la complexité des modèles utilisés et la qualité d'estimation de ceux-ci par rapport aux données empiriques. On choisit ensuite le modèle qui donne le plus petit critère. \
+
+
+La fonction ```arima``` ne renvoyant que l'AIC pour un modèle, on calcule le BIC à partir de la fonction ```BIC``` de R..
+
+```{r, warning=FALSE}
+order_max = 4
+
+order_p = c()
+order_q = c()
+aic = c()
+bic = c()
+
+for(p in 0:order_max){
+  for(q in 0:order_max){
+    order_p = c(order_p, p)
+    order_q = c(order_q, q)
+    model = arima(data$yield, order=c(p, 0, q))
+    
+    aic = c(aic, model$aic)
+    bic = c(bic, BIC(model))
+  }
+}
+
+arma_models = data.frame(order_p, order_q, aic, bic)
+
+arma_models[which(arma_models$aic == min(arma_models$aic)),]  # modèle avec AIC minimal
+arma_models[which(arma_models$bic == min(arma_models$bic)),]  # modèle avec BIC minimal
+```
+
+
+Le modèle minimisant le critère AIC est un modèle ARMA(2,2) tandis que le modèle qui minimise le critère BIC est un modèle ARMA(2,0). On voit ainsi que les deux critères d'information ne sont pas équivalents : en effet, le critère BIC prend en compte la taille de l'échantillon. Quel que soit le critère à minimiser, le modèle correspondant donne un ordre p égal à 2, ce qui confirme la conclusion de la première approche. \
+
+
+En fonction du critère à minimiser, on choisira plutôt un modèle ARMA(2, 0) ou un modèle ARMA(2, 2).
+
+## Question 9
+
+```{r}
+arima_data = auto.arima(data$yield, d=0, D=0)
+mean(data$yield)
+
+summary(arima_data)
+```
+
+Le modèle suggéré est un ARMA(2, 2), ce qui confirme la conclusion des deux approches de la question 8 concernant l'ordre p. Quant à l'ordre q, il semble qu'en accord avec la deuxième approche, ce soit l'AIC qui ait été privilégié par la fonction ```auto.arima```. \
+
+
+La qualité d'estimation est plutôt bonne car elle donne une Root Mean Square Error (RMSE) de $0.002$, soit environ $0.002 / 0.045 \approx 4 \%$ de la moyenne des yields, de même pour la Mean Absolute Error (MAE) qui est de $0.001$, soit environ $0.001 / 0.045 \approx 2 \%$.
+
+
+## Question 10
+
+```{r}
+sigma2 = arima_data$sigma2
+
+prediction = predict(arima_data, n.ahead=3)
+
+prediction_upper = prediction$pred + 1.96*sigma2  # intervalle de confiance à 95%
+prediction_lower = prediction$pred - 1.96*sigma2
+
+```
+
+
+On résume ci-dessous la dernière observation et les prédictions ainsi que leur intervalle de confiance.
+
+```{r, eval=TRUE, include=FALSE, warning=FALSE, echo=FALSE}
+row1 = c("Observation", 0.04493882, NA)
+row2 = c("Prédiction", 0.04510701, "[0.04509974,0.04511429]")
+row3 = c("Prédiction", 0.04520995, "[0.04520267, 0.04521722]")
+row4 = c("Prédiction", 0.04528877, "[0.04528150, 0.04529604]")
+matrix = data.frame(rbind(row1, row2, row3, row4))
+colnames(matrix) = c("Statut", "Valeur", "Intervalle de confiance à 95%")
+rownames(matrix) = c("01/09/2018", "01/10/2018", "01/11/2018", "01/12/2018")
+```
+
+```{r, result='asis', echo=FALSE}
+kable(matrix, caption="Résultats des prédictions du modèle ARMA(2,2) sur un horizon de trois périodes")
+```
+
+
+## Question 11
+
+### MAE
+
+```{r}
+MAE_fit2 = mean(abs(fit2$residuals))
+MAE_fit2
+```
+
+On trouve une MAE pour la régression linéaire (par rapport aux taux d'intérêt réels) de 0.008861187, elle est donc supérieure au 0.00127265 pour la MAE du modèle ARMA(2,2). Au sens de la MAE, c'est donc le modèle ARMA qui est meilleur.
+
+### RMSE
+
+```{r}
+RMSE_fit2 = sqrt(mean(fit2$residuals^2))
+RMSE_fit2
+```
+
+La RMSE pour la régression linéaire est de 0.01053751 alors que le modèle ARMA(2,2) donne une RMSE de 0.001906076. Le modèle ARMA est donc meilleur que la régression linéaire au sens de la RMSE. \
+
+
+Ainsi, que ce soit au sens de la RMSE ou de la MAE, le modèle ARMA(2,2) semble être un meilleur modèle que la régression linéaire.
+
+
+## Question 12
+
+On prend une période de 100 mois sur laquelle on estime les $\beta_i$ : $\beta_i$ est donc le coefficient de $r_t$ dans l'équation de régression $\frac{E_t}{P_t} = \alpha + \beta r_t$ résolue à l'aide uniquement des données disponibles entre le mois $i$ et le mois $i + 99$. $\beta_1$ porte donc sur les données entre le mois $1$ et le mois $100$; $\beta_2$ sur celles entre le mois $2$ et le mois $101$ etc.
+
+```{r}
+period_move = 1
+period_length = 100
+
+nperiods = (length(data$price) - period_length) %/% period_move
+
+beta = c()
+lower = c()
+upper = c()
+
+for(i in 0:nperiods){
+    
+    yields = data$yield[(i*period_move+1):(i*period_move + period_length)]
+    real_rates = data$real_rates[(i*period_move+1):(i*period_move + period_length)]
+    fit_i = lm(yields ~ real_rates)
+    confidence = confint(fit_i)
+    
+    beta = c(beta, fit_i$coefficients[2])
+    lower = c(lower, confidence[2,1])
+    upper = c(upper, confidence[2,2])
+}
+
+plot(0:nperiods + 1, beta, ylim=c(min(lower), max(upper)), xlab="Mois de début de période",
+     ylab="Coefficient bêta",
+     main="Coefficient bêta glissant")
+lines(upper)
+lines(lower)
+```
+
+
+ Globalement, le coefficient $\beta$ reste négatif et oscille autour d'une valeur moyenne à $-0.006$. On remarque toutefois que $\beta$ baisse notablement en valeur autour du 120e mois, c'est-à-dire si l'on essaie de régresser le yield par rapport aux taux sur des données postérieures à fin 2007. Cela peut s'expliquer par le fait que la crise de 2008 a notablement dégradé les taux qui sont devenus négatifs et moins volatils, d'où un dénominateur plus faible dans l'expression $$\hat{\beta} = \frac{Cov(\frac{E}{P}, r)}{\sigma_r^2}$$ ce qui pourrait expliquer pourquoi $\beta$ a augmenté en valeur absolue.
+ 
+ 
+## Question 13
+
+
+Le test CUSUM est un test fondé sur la somme cumulée (**cu**mulative **sum** en anglais) des résidus récursifs : au fur et à mesure que le modèle "grossit" avec un nombre croissant de données pour estimer le coefficient $\beta$, on en déduit les résidus récursifs qui représentent l'erreur successive entre les données observées et les données modélisées. \
+La somme partielle est la statistique de test; elle permet de détecter tout changement structurel dans l'estimation : lorsque la somme sort d'un certain intervalle de stabilité, on décrète qu'il y a eu un changement significatif dans l'estimation, et qu'il y a donc instabilité du modèle. \
+
+
+Lorsque l'on effectue un test CUSUM, l'hypothèse nulle est la constance des coefficients estimés par le modèle. Sous cette hypothèse nulle, il y a instabilité du modèle dès lors que la statistique de test sort de l'intervalle de stabilité.
+
+
+```{r}
+cusum_data = efp(data$yield ~ data$real_rates)
+plot(cusum_data)
+
+sctest = sctest(data$yield ~ data$real_rates)
+sctest
+```
+
+On voit que la statistique de test n'est pas entièrement contenue dans l'intervalle de stabilité délimité par les droites en rouge. **Il y a donc instabilité du modèle**, ce qui est confirmé par la fonction ```sctest``` qui donne une p-valeur très basse, d'où un rejet de l'hypothèse nulle : le coefficient $\beta$ estimé n'est en fait pas constant sur toute la durée d'observation.
