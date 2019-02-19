@@ -3,9 +3,9 @@ title: "TP Séries chronologiques"
 author: "Laurent LIN & Guillaume SHI"
 date: "24/02/2019"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -26,6 +26,8 @@ library(lmtest)
 
 ## Question 1
 
+*Calculer le earning yield de l'indice du S&P500. Tracer un nuage de points liant le earning yield au taux sans risque. L'ajustement linéaire est-il justifié ? Utiliser la commande "abline" pour tracer cet ajustement.*
+
 L'earning yield est défini comme étant le rapport entre l'earning et le prix d'une action. \
 
 
@@ -43,14 +45,17 @@ abline(0.0675, -0.00625, col="red", lwd=2)
 
 ## Question 2
 
+*Rappeler le principe de la méthode des moindres carrés ordinaires. Rappeler les hypothèses sous-jacente de l'estimateur des MCO.*\
 
-On considère la régression linéaire du vecteur des variables d'intérêt $\mathbf{y}$ en fonction du vecteur des variables explicatives $\mathbf{X}$ : il s'agit de trouver le vecteur $\boldsymbol{\gamma}$ tel que $\mathbf{y} = \mathbf{X}^T\boldsymbol{\gamma} + \boldsymbol{\epsilon}$ où $\boldsymbol{\epsilon}$ représente un bruit blanc. L'hypothèse sous-jacente est donc que $\mathbb{E}(\boldsymbol{\epsilon}) = \boldsymbol{0}$ et $\mathbb{E}(\boldsymbol{\epsilon}\boldsymbol{\epsilon}^T) = \sigma I_n$ avec $\sigma$ constante (décorrélation et homoscédasticité) \
+
+On considère la régression linéaire du vecteur des variables d'intérêt $\mathbf{y}$ en fonction du vecteur des variables explicatives $\mathbf{X}$ : il s'agit de trouver le vecteur $\boldsymbol{\gamma}$ tel que $\mathbf{y} = \mathbf{X}^T\boldsymbol{\gamma} + \boldsymbol{\epsilon}$ où $\boldsymbol{\epsilon}$ représente un bruit blanc. Les hypothèses sous-jacentes sont qu'il existe une relation linéaire entre $\mathbf{y}$ et $\mathbf{X}$, $\mathbf{X}$ doit être de rang maximum (non-colinéarité des variables explicatives),  $\mathbb{E}(\boldsymbol{\epsilon}) = \boldsymbol{0}$ (indépendance des erreurs) et $\mathbb{E}(\boldsymbol{\epsilon}\boldsymbol{\epsilon}^T) = \sigma I_n$ avec $\sigma$ constante (homoscédasticité). \
 
 
-La méthode des moindres carrés ordinaires (MCO) consiste à trouver le vecteur $\boldsymbol{\gamma}$ par minimisation de la quantité suivante : $\Delta = (\mathbf{y} - \mathbf{X}\boldsymbol{\gamma})^2$. Ce problème de minimisation se résout en dérivant la quantité $\Delta$ par rapport à chacune des composantes de $\boldsymbol{\gamma}$ et en écrivant que la quantité obtenue est nulle : $$\forall 1\leq i \leq n, \frac{\partial \Delta}{\partial \boldsymbol{\gamma}_i} = 0$$
+La méthode des moindres carrés ordinaires (MCO) consiste à trouver le vecteur $\boldsymbol{\gamma}$ par minimisation de la quantité suivante : $\Delta = (\mathbf{y} - \mathbf{X}^T\boldsymbol{\gamma})^2$. Ce problème de minimisation se résout en dérivant la quantité $\Delta$ par rapport à chacune des composantes de $\boldsymbol{\gamma}$ et en écrivant que la quantité obtenue est nulle : $$\forall 1\leq i \leq n, \frac{\partial \Delta}{\partial \boldsymbol{\gamma}_i} = 0$$
 
 ## Question 3
 
+*Calculer les expressions des coefficients des estimateurs des moindres carrés et montrer que la variance de beta tend vers 0 quand T tend vers l'infini.*\
 
 On garde les notations de la question précédente. Ici, on souhaite calibrer $\boldsymbol{\gamma}  = ( \alpha \ \ \beta)^T$ afin d'avoir une relation du type $\mathbf{y} = \frac{E_t}{P_t} = \mathbf{X}^T\boldsymbol{\gamma}$ si $\mathbf{X} = (1 \ \ r_t)^T$ désigne le vecteur des variables explicatives. Etant en présence de variables aléatoires, la quantité à minimiser est $$\mathbb{E}((\frac{E_t}{P_t} - (\alpha + \beta r_t))^2) = \mathbb{E}(\frac{E_t}{P_t}) - 2\mathbb{E}(\frac{E_t}{P_t}(\alpha + \beta r_t)) + \mathbb{E}((\alpha + \beta r_t)^2) = \Delta$$ 
 
@@ -83,26 +88,27 @@ $$
 
 ## Question 4 : interprétation des résultats de l'estimateur des MCO
 
-*A l'aide la fonction "lm" du logiciel R, estimer par les MCO les coeffi􏰧cients de l'équation 2. Commenter vos résultats en particulier le signe du coeffi􏰧cient et sa signi􏰥cativité. Qu'indiquent les statistiques de Student et de Fisher ainsi que le coeffi􏰧cient de détermination ?*
+*A l'aide la fonction "lm" du logiciel R, estimer par les MCO les coeffi􏰧cients de l'équation 2. Commenter vos résultats en particulier le signe du coeffi􏰧cient et sa signi􏰥cativité. Qu'indiquent les statistiques de Student et de Fisher ainsi que le coeffi􏰧cient de détermination ?*\
 
 ```{r}
 fit = lm(data$yield ~ data$rates)
 summary(fit)
 ```
 
-- $\widehat{\beta} = -0.0036653$ est de signe négatif, ce qui signifie que le earning yield diminue avec l'augmentation du ratetaux sans risqu $\widehat{\alpha} = 0.0586936$ est (l'`intercept`) de signe positif, cela signifie que le earning yield vaut 0.0586936
+- $\widehat{\beta} = -0.0036653$ est de signe négatif, ce qui signifie que le earning yield diminue avec l'augmentation du taux sans risque.
+- $\widehat{\alpha} = 0.0586936$ (l'`intercept`) est de signe positif, cela signifie que le earning yield vaut 0.0586936 lorsque le taux sans risque est nul.
 
--  lorsque le taux sans risque est nul.La statistique de Student (`t-value`) est un critère qui permet de juger sur l'hypothèse nulle suivante : H0 = {le coefficient considéré vaut 0}. On peut alors observer la p-value associée (`Pr(>|t|)`) : ici, sa valeur vaut `2.94e-08` et epour $\widehat{\beta}$ et `< 2e-16` pour $\widehat{\alpha}$ st donc inférieur aux seuils de significativité classiques (0.1%, 1%, 5% etc.), nous pouvons rejeter H0 et donc dire que le ccesfficient ests songnificativement différent de s0.
+- La statistique de Student (`t-value`) est un critère qui permet de juger sur l'hypothèse nulle suivante : H0 = {le coefficient considéré vaut 0}. On peut alors observer la p-value associée (`Pr(>|t|)`) : ici, sa valeur vaut `2.94e-08` pour $\widehat{\beta}$ et `< 2e-16` pour $\widehat{\alpha}$ et est donc inférieur aux seuils de significativité classiques (0.1%, 1%, 5% etc.), nous pouvons rejeter H0 et donc dire que ces coefficients sont significativement différents de 0.
   
 - Le F-test considère l'hypothèse nulle suivante : H0 = {les coefficients (autre que l'`intercept`) valent tous 0}, il s'agit d'une comparaison avec le modèle constitué uniquement d'une estimation de l'`intercept` ie l'ordonnée à l'origine. La p-value associée à la statistique de Fisher valant `2.944e-08`, elle est inférieure aux seuils de c'est-à-dire qu'au moins une variable n'est pas significativement différente de significativité classiques (0.1%, 1%, 5% etc.) donc on peut rejeter cette hypothèse nulle, ie que le modèle dans l'ensemble est significatif.  On peut remarquer que comme il n'y a qu'une seule variable autre que l'ordonnée à l'origine, la p-valeur de la F-stat est la même que celle de la statistique de Student.
 
-Le coefficient de détermination `R-s$R^2$ (quared = 0.1229` et )le coefficient de détermination ajusté `Adj(usted R-squared = 0.1191` son)t tous les deux très faibles, indiquant que seulement une faible part d'environ 12% de la variable en question `\frac{E_t}{P_t}` est expliquée par le modèle, donc la qualité de la régression est médiocre.
+Le coefficient de détermination $R^2$ (`R-squared = 0.1229`) et le coefficient de détermination ajusté (`Adjusted R-squared = 0.1191`) sont tous les deux très faibles, indiquant que seulement une faible part d'environ 12% de la variable en question $\frac{E_t}{P_t}$ est expliquée par le modèle, donc la qualité de la régression est médiocre.
 
 ## Question 5 - Résidus estimés
-Réaliser un étude complète des résidus estimés : tracer leur densité, étudier leur normalité et vérifi􏰥er l'existence/l'absence d'autocorrélation et d'hétéscédasticité.
+*Réaliser un étude complète des résidus estimés : tracer leur densité, étudier leur normalité et vérifi􏰥er l'existence/l'absence d'autocorrélation et d'hétéscédasticité.*\
 
-Normalité des résidus du modèle :
-En visualisant la densité des résidus, nous voyons que celle-ci n'a pas la forme de cloche symétrique que possède une distribution normale classique. Cette idée est confirmée par le graphe quantile-quantile (qq-plot) avec : nous voyons que les points s'éloignent en queue de distribution. Le test de Shapiro-Wilk est effectué avec comme hypothèse nulle H0 = {l'échantillon est issu d'une population normalement distribué}, la p-valeur associée étant de ` 1.233e-07 < 0.05`, nous pouvons rejeter H0 : il est probable que les données ne soient pas issues d'une population normalement distribuée.
+
+- Normalité des résidus du modèle : En visualisant la densité des résidus, nous voyons que celle-ci n'a pas la forme de cloche symétrique que possède une distribution normale classique. Cette idée est confirmée par le graphe quantile-quantile (qq-plot) avec : nous voyons que les points s'éloignent en queue de distribution. Le test de Shapiro-Wilk est effectué avec comme hypothèse nulle H0 = {l'échantillon est issu d'une population normalement distribué}, la p-valeur associée étant de ` 1.233e-07 < 0.05`, nous pouvons rejeter H0 : il est probable que les données ne soient pas issues d'une population normalement distribuée.
 
 ```{r}
 plot(density(resid(fit)))
@@ -112,31 +118,27 @@ qqline(resid(fit))
 shapiro.test(resid(fit))
 ```
 
-Autocorrélation des résidus
-En observant la fonction d'autocorrélation sur la série des résidus, on constate qu'il y a existence d'autocorrélation : la fonction d'autocorrélation prend des valeurs positives importantes (>0.2 en valeur absolue) pour des lags allant de 1 à 14 jours. Cela signifie que le modèle n'est pas optimal car les résidus peuvent être utilisés pour prédire les prochains résidus : il y a de l'information qui échappe au modèle actuel.
+- Autocorrélation des résidus : En observant la fonction d'autocorrélation sur la série des résidus, on constate qu'il y a existence d'autocorrélation : la fonction d'autocorrélation prend des valeurs positives importantes (>0.2 en valeur absolue) pour des lags allant de 1 à 14 jours. Cela signifie que le modèle n'est pas optimal car les résidus peuvent être utilisés pour prédire les prochains résidus : il y a de l'information qui échappe au modèle actuel.
+
 
 ```{r}
-plot(resid(fit), main="Evolution des résidus", xlab="date", ylab="résidu",)
+plot(resid(fit), main="Evolution des résidus", xlab="date", ylab="résidu")
 acf(resid(fit))
 ```
 
-Hétéroscédasticité des résidus
-L'observation sur les résidus nous fait penser que ceux-ci sont hétéroscédastiques : la variance des résidus a augmenté puis diminué au cours du temps. Le test de Breusch-Pagan donne une p-valeur de `0.1577`, on peut rejeter l'hypothèse nulle H0 = {les données sont homoscédastiques} avec un seuil de confiance de 20%, ce qui est plutôt élevé comparé à tous les autres seuils de confiance obtenus précédemment.
+- Hétéroscédasticité des résidus : L'observation sur les résidus nous fait penser que ceux-ci sont hétéroscédastiques : la variance des résidus a augmenté puis diminué au cours du temps. Le test de Breusch-Pagan donne une p-valeur de `0.1577`, on peut rejeter l'hypothèse nulle H0 = {les données sont homoscédastiques} avec un seuil de confiance de 20%, ce qui est plutôt élevé comparé à tous les autres seuils de confiance obtenus précédemment.
 
 
 ```{r}
-# gqtest(fit, alternative = "two.sided")
 bptest(fit)
-# bptest(fit, ~rates, data=data)
-# ncvTest(fit)
 ```
 
-Conclusion : Outre le fait que le modèle ait un coefficient de détermination faible, l'étude des résidus a montré que ces derniers ne suivent pas une distribution normale, il y a présence d'autocorrélation et d'hétéroscédasticité, modéliser le earning yield en utilisant uniquement le taux sans risque ne permet pas d'avoir une modélisation où les hypothèses sous-jacente de l'esimateutr des MCO ne sont respectées, il faudrait améliorer le modèle.
+Conclusion : Outre le fait que le modèle ait un coefficient de détermination faible, l'étude des résidus a montré que ces derniers ne suivent pas une distribution normale, il y a présence d'autocorrélation et d'hétéroscédasticité, modéliser le earning yield en utilisant uniquement le taux sans risque ne permet pas d'avoir une modélisation où les hypothèses sous-jacente de l'esimateur des MCO ne sont respectées, il faudrait améliorer le modèle.
 
-# Partie 2: Estimation d'une nouvelle spéci􏰥cation et comparaison
+# Partie 2: Estimation d'une nouvelle spécifi􏰥cation et comparaison
 
 ## Question 6
-*Calculer le taux d'intérêt réel. Estimer par la méthode des moindres carrés ordinaires cette nouvelle spéci􏰥cation. Améliore-t-elle le pouvoir explicatif du modèle? Justi􏰥er votre réponse.*
+*Calculer le taux d'intérêt réel. Estimer par la méthode des moindres carrés ordinaires cette nouvelle spéci􏰥cation. Améliore-t-elle le pouvoir explicatif du modèle? Justi􏰥er votre réponse.*\
 
 Le taux d'intérêt réel est calculé par en utilisant l'indice des prix à la consommation (CPI) sur 12 mois de la façon suivante : 
 $$\pi_t = 100 \frac{cpi_t - cpi_{t-12}}{cpi_{t-12}}$$
@@ -162,8 +164,10 @@ abline(0.050445, -0.0062351, col="deeppink", lwd=2)
 ```
 
 Concernant le pouvoir explicatif du modèle : 
-+ Le coefficient de détermination $R^2$ est de à présent 0.39, ce qui est une amélioration nette par rapport à précédemment où il était de 0.14.
-+ Toutefois, une analyse plus poussée des résidus montre que les résidus ne suivent toujours pas une distribution normale, ni décorrélés, ni homoscédastiques La fonction de densité présentent deux pics, les points en queue de distribution qui s'éloignent de la valeur théorique du diagramme quantile-quantile et le test de Shapiro-Wilk présente une p-valeur très faible de `0.004569` permettant de rejeter l'hypothèse nulle que les données suivent une distribution normale. La fonction d'autocorrélation montre que les résidus ne sont pas décorrélés. Le test de Breusch-Pagan donne une p-valeur de `0.7441` donc nous ne pouvons pas conclure sur l'homoscédasticité des résidus. 
+
+- Le coefficient de détermination $R^2$ est de à présent 0.39, ce qui est une amélioration nette par rapport à précédemment où il était de 0.14.
+
+- Toutefois, une analyse plus poussée des résidus montre que les résidus ne suivent toujours pas une distribution normale, ni décorrélés, ni homoscédastiques La fonction de densité présentent deux pics, les points en queue de distribution qui s'éloignent de la valeur théorique du diagramme quantile-quantile et le test de Shapiro-Wilk présente une p-valeur très faible de `0.004569` permettant de rejeter l'hypothèse nulle que les données suivent une distribution normale. La fonction d'autocorrélation montre que les résidus ne sont pas décorrélés. Le test de Breusch-Pagan donne une p-valeur de `0.7441` donc nous ne pouvons pas conclure sur l'homoscédasticité des résidus. 
 
 L'amélioration du pouvoir explicatif du modèle se traduit alors uniquement par un meilleur coefficient de détermination, le modèle linéaire choisi ne permet pas d'obtenir des résidus conformes aux hypothèses de modélisation du modèle MCO.
 
@@ -175,16 +179,23 @@ qqline(resid(fit2))
 shapiro.test(resid(fit2))
 acf(resid(fit2))
 bptest(fit2)
-
 ```
 
+
+# Partie 3: Estimation d'une nouvelle spécifi􏰥cation : modèle  $ARMA(p,q)$
+
+
 ## Question 7
+
+*Présenter le modèle ARMA et ses principales propriétés de manière précise et succinte.*\
 
 Le modèle ARMA est un modèle mathématique visant à modéliser le comportement d'une série temporelle en fonction de ses valeurs historiques (c'est la partie autorégressive –AR– du modèle) mais aussi en fonction d'un bruit blanc qui viendrait perturber les données (d'où une moyenne mobile dans le modèle –MA–), dans le but de prédire les valeurs que prendrait la série temporelle dans le futur. \
 
 Pour une variable représentée par une série temporelle, on introduit généralement les ordres p et q et on parle d'un modèle ARMA(p,q) pour modéliser une valeur au temps t à partir des p valeurs précédentes et de q bruits blancs indépendants et identiquement distribués : $$X_t = \phi_1X_{t-1} + ... + \phi_pX_{t-p} + \epsilon_t + \theta_1 \epsilon_{t-1} + ... + \theta_q \epsilon_{t-q} $$
 
 ## Question 8
+
+*Identi􏰥er l'ordre du modèle ARMA à l'aide de deux méthodes ffdi􏰤érentes (on privilégiera un ap- proche parcimonieuse)*\
 
 ### Première approche
 
@@ -247,20 +258,32 @@ En fonction du critère à minimiser, on choisira plutôt un modèle ARMA(2, 0) 
 
 ## Question 9
 
+*Estimer le modèle identifié à l'aide de la fonction auto.arima et vérifier la qualité de votre estimation*\
+
 ```{r}
-arima_data = auto.arima(data$yield, d=0, D=0)
+arima_data = auto.arima(data$yield, d=0, D=0, ic="aic")
 mean(data$yield)
 
 summary(arima_data)
 ```
 
-Le modèle suggéré est un ARMA(2, 2), ce qui confirme la conclusion des deux approches de la question 8 concernant l'ordre p. Quant à l'ordre q, il semble qu'en accord avec la deuxième approche, ce soit l'AIC qui ait été privilégié par la fonction ```auto.arima```. \
+```{r}
+arima_data = auto.arima(data$yield, d=0, D=0, ic="bic")
+mean(data$yield)
+
+summary(arima_data)
+
+```
+
+Le moèle suggéré est un ARMA(2, 2), ce qui confirme la conclusion des deux approches de la question 8 concernant l'ordre p. Quant à l'ordre q, il semble qu'en accord avec la deuxième approche, ce soit l'AIC qui ait été privilégié par la fonction ```auto.arima```. \
 
 
 La qualité d'estimation est plutôt bonne car elle donne une Root Mean Square Error (RMSE) de $0.002$, soit environ $0.002 / 0.045 \approx 4 \%$ de la moyenne des yields, de même pour la Mean Absolute Error (MAE) qui est de $0.001$, soit environ $0.001 / 0.045 \approx 2 \%$.
 
 
 ## Question 10
+
+*Effectuer une prévision à l'aide de la commande predict sur horizon de trois périodes. Donner l'intervalle de confiance à 95%*\
 
 ```{r}
 sigma2 = arima_data$sigma2
@@ -286,6 +309,8 @@ lines(1:36, prediction_upper, col="orange")
 
 ## Question 11
 
+*Comparer  les deux derniers modèles estimés en utilisant ces deux critères (MAE et RMSE). Quel est celui qui affiche la meilleure performance ?*\
+
 ### MAE
 
 ```{r}
@@ -309,6 +334,8 @@ Ainsi, que ce soit au sens de la RMSE ou de la MAE, le modèle ARMA(2,2) semble 
 
 
 ## Question 12
+
+*A l'aide d'une routine que vous développez sour R, estimer les coefficients conformément à la méthode glissante. Tracer les courbes des coefficients $\beta_i$ estsimés ainsi que leur intervalle de confiance au seuile de 95%. Commenter*\
 
 On prend une période de 100 mois sur laquelle on estime les $\beta_i$ : $\beta_i$ est donc le coefficient de $r_t$ dans l'équation de régression $\frac{E_t}{P_t} = \alpha + \beta r_t$ résolue à l'aide uniquement des données disponibles entre le mois $i$ et le mois $i + 99$. $\beta_1$ porte donc sur les données entre le mois $1$ et le mois $100$; $\beta_2$ sur celles entre le mois $2$ et le mois $101$ etc.
 
@@ -347,6 +374,7 @@ lines(lower)
  
 ## Question 13
 
+*Présenter le test CUSUM. Implémenter le test de CUSUM et commenter vos résultats *\
 
 Le test CUSUM est un test fondé sur la somme cumulée (**cu**mulative **sum** en anglais) des résidus récursifs : au fur et à mesure que le modèle "grossit" avec un nombre croissant de données pour estimer le coefficient $\beta$, on en déduit les résidus récursifs qui représentent l'erreur successive entre les données observées et les données modélisées. \
 La somme partielle est la statistique de test; elle permet de détecter tout changement structurel dans l'estimation : lorsque la somme sort d'un certain intervalle de stabilité, on décrète qu'il y a eu un changement significatif dans l'estimation, et qu'il y a donc instabilité du modèle. \
