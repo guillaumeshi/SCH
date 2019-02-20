@@ -1,0 +1,156 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+rm(list = ls())
+library(dplyr)
+library(tidyr)
+library(urca)
+library(forecast)
+library(strucchange)
+library(lmtest)
+library(het.test)
+
+df = read.csv("0219_td_centrale.csv", sep=";")
+df$yield = df$earnings / df$price
+```
+
+# Partie 1 : Estimation du modèle
+
+Question 1 : Calculer le earning yield de l'indice du S&P500. Tracer un nuage de points liant le earning yield au taux sans risque. L'ajustement linéaire est-il justi􏰥er ? Utiliser la commande "abline" pour tracer cet ajus- tement.
+
+
+```{r}
+plot(df$rates, df$yield,  main="Scatterplot Example", xlab="Rates", ylab="Earning yield", pch=19)
+abline(lm(df$yield~df$rates), col="red")
+model = lm(df$yield~df$rates)
+summary(model)
+```
+
+## Question 3 : Démontrer que $\lim_{T \rightarrow \infty} \mathrm{Var}(\hat{\beta})= 0$
+
+Pour calculer $\widehat{\beta}$, il faut utiliser les estimateurs empiriques des fonctions de la moyenne ($\widehat{x} = \frac{1}{T+1}\sum_{t=0}^{T} x_i$), la variance et de la covariance, ce qui donne : $\widehat{\beta} = \frac{\sum_{t=0}^{T} (r_t - \bar{r})(\frac{E_t}{P_t} - \overline{(\frac{E_t}{P_t})})}{\sum_{t=0}^{T} (r_t - \bar{r})^2}$.
+
+En injectant l'équation (2) décrivant le modèle vérifié par les données, on obtient :
+$\mathrm{Var}(\widehat{\beta}) = \mathrm{Var}(\frac{\sum_{t=0}^{T} (r_t - \bar{r})(\alpha + \beta r_t + \epsilon_t - \overline{(\frac{E_t}{P_t})})}{\sum_{t=0}^{T} (r_t - \bar{r})^2})$
+
+On remarque qu'au numérateur, les $\epsilon_t$ sont les seules variables aléatoires, le reste peut être supprimé de la variance, on obtient donc : $\mathrm{Var}(\widehat{\beta}) = \mathrm{Var}( \frac{\sum_{t=0}^{T} (r_t - \bar{r})\epsilon_t}{\sum_{t=0}^{T} (r_t - \bar{r})^2} )$
+
+Par hypothèse, les $\epsilon_t$ sont i.i.d. donc on obtient finalement :
+$$\mathrm{Var}(\widehat{\beta}) 
+= \sum_{t=0}^{T} \mathrm{Var}(\frac{ (r_t - \hat{r})\epsilon_t}{\sum_{t=0}^{T} (r_t - \bar{r})^2}) 
+= \frac{\sum_{t=0}^{T} (r_t - \bar{r})^2 \mathrm{Var}(\epsilon_t)}{(\sum_{t=0}^{T} (r_t - \bar{r})^2)^2}
+= \sigma_{\epsilon}^2 \frac{\sum_{t=0}^{T} (r_t - \bar{r})^2}{(\sum_{t=0}^{T} (r_t - \bar{r})^2)^2}
+= \frac{\sigma_{\epsilon}^2}{\sum_{t=0}^{T} (r_t - \bar{r})^2}
+$$
+
+Comme le dénominateur est une somme de termes positifs, donc lorsque $T \rightarrow \infty$, $\sum_{t=0}^{T} (r_t - \bar{r})^2 \rightarrow \infty$ et donc  $\lim_{T \rightarrow \infty} \mathrm{Var}(\hat{\beta})= 0$
+
+
+## Question 4 : interprétation des résultats de l'estimateur des MCO
+
+A l'aide la fonction "lm" du logiciel R, estimer par les MCO les coeffi􏰧cients de l'équation 2. Com- menter vos résultats en particulier le signe du coeffi􏰧cient et sa signi􏰥cativité. Qu'indiquent les statistiques de Student et de Fisher ainsi que le coeffi􏰧cient de détermination ?
+
+Signe du coefficient $\widehat{\beta}$ : $\widehat{\beta} = -0.0036653$ est de signe négatif, ce qui signifie que le yield diminue avec l'augmentation du rate.
+
+Statistique de Student (t-value) : 
+  + La statistique de Student (`t-value`) est un critère qui permet de juger sur l'hypothèse nulle suivante : H0 = {le coefficient considéré vaut 0}. On peut alors observer la p-value associée (`Pr(>|t|)`) : ici, sa valeur vaut `2.94e-08` et est donc inférieur aux seuils de significativité classiques (0.1%, 1%, 5% etc.), nous pouvons rejeter H0 et donc dire que le coefficient est significativement différent de 0.
+  
+Statistique de Fisher (F-stat) : 
+  + Le F-test considère l'hypothèse nulle suivante : H0 = {les coefficients (autre que l'`intercept`) valent tous 0}, il s'agit d'une comparaison avec le modèle constitué uniquement d'une estimation de l'`intercept` ie l'ordonnée à l'origine. La p-value associée valant `2.944e-08`, elle est inférieure aux seuils de c'est-à-dire qu'au moins une variable n'est pas significativement différente de significativité classiques (0.1%, 1%, 5% etc.) donc on peut rejeter cette hypothèse nulle, ie que le modèle dans l'ensemble est significatif.  On peut remarquer que comme il n'y a qu'une seule variable autre que l'ordonnée à l'origine, la p-valeur de la F-stat est la même que celle de la statistique de Student.
+
+Le coefficient de détermination `R-squared = 0.1229` et le coefficient de détermination ajusté `Adjusted R-squared = 0.1191` sont tous les deux très faibles, indiquant que seulement une faible part d'environ 12% de la variable en question `\frac{E_t}{P_t}` est expliquée par le modèle, donc la qualité de la régression est médiocre.
+
+## Question 5 - Résidus estimés
+Réaliser un étude complète des résidus estimés : tracer leur densité, étudier leur normalité et vérifi􏰥er l'existence/l'absence d'autocorrélation et d'hétéscédasticité.
+
+Normalité des résidus du modèle :
+En visualisant la densité des résidus, nous voyons que celle-ci n'a pas la forme de cloche symétrique que possède une distribution normale classique. Cette idée est confirmée par le graphe quantile-quantile (qq-plot) avec : nous voyons que les points s'éloignent en queue de distribution. Le test de Shapiro-Wilk est effectué avec comme hypothèse nulle H0 = {l'échantillon est issu d'une population normalement distribué}, la p-valeur associée étant de ` 1.233e-07 < 0.05`, nous pouvons rejeter H0 : il est probable que les données ne soient pas issues d'une population normalement distribuée.
+
+```{r}
+plot(density(resid(model))) #A density plot
+qqnorm(resid(model)) # A quantile normal plot - good for checking normality
+qqline(resid(model))
+
+shapiro.test(resid(model))
+```
+
+Autocorrélation des résidus
+En observant la fonction d'autocorrélation sur la série des résidus, on constate qu'il y a existence d'autocorrélation : la fonction d'autocorrélation prend des valeurs importantes (>0.2 en valeur absolue) pour des lags allant de 1 à 14 jours.
+
+```{r}
+plot(resid(model), main="Evolution des résidus", xlab="date", ylab="résidu",)
+acf(resid(model))
+```
+
+Hétéroscédasticité des résidus
+L'observation sur les résidus nous fait penser que ceux-ci sont hétéroscédastiques : la variance des résidus a augmenté puis diminué au cours du temps. Le test de Breusch-Pagan donne une p-valeur de `0.1577`, on peut rejeter l'hypothèse nulle H0 = {les données sont homoscédastiques} avec un seuil de confiance de 20%, ce qui est plutôt élevé comparé à tous les autres seuils de confiance obtenus précédemment.
+
+
+```{r}
+# gqtest(model, alternative = "two.sided")
+bptest(model)
+bptest(model, ~rates, data=df)
+# ncvTest(model)
+```
+
+Conclusion : Outre le fait que le modèle ait un coefficient de détermination faible, l'étude des résidus a montré que ces derniers ne suivent pas une distribution normale, il y a présence d'autocorrélation et d'hétéroscédasticité, modéliser le earning yield en utilisant uniquement le taux sans risque ne permet pas d'avoir une modélisation où les hypothèses sous-jacente de l'esimateutr des MCO ne sont respectées, il faudrait améliorer le modèle.
+
+
+# Partie 2: Estimation d'une nouvelle spéci􏰥cation et comparaison
+
+Question 6 - Calculer le taux d'intérêt réel. Estimer par la méthode des moindres carrés ordinaires cette nouvelle spéci􏰥cation. Améliore-t-elle le pouvoir explicatif du modèle? Justi􏰥er votre réponse.
+
+Le pouvoir explicatif du modèle est amélioré : le score R2 vaut 36% au lieu de 14%.
+
+```{r}
+df$cpi_lag = lag(df$cpi, 12)
+df = df[-(1:12),]
+df$pi = (df$cpi / df$cpi_lag - 1) * 100
+df$real_rates = df$rates - df$pi 
+
+plot(df$real_rates, df$yield,  main="Scatterplot Example", xlab="Real Rates", ylab="Earning yield", pch=19)
+abline(lm(df$yield~df$real_rates), col="red")
+
+model = lm(df$yield~df$real_rates)
+summary(model)
+```
+
+```{r}
+plot(density(resid(model))) #A density plot
+qqnorm(resid(model)) # A quantile normal plot - good for checking normality
+qqline(resid(model))
+
+shapiro.test(resid(model))
+
+plot(resid(model), main="Evolution des résidus", xlab="date", ylab="résidu",)
+acf(resid(model))
+
+bptest(model)
+bptest(model, ~real_rates, data=df)
+
+
+```
+
+
+# Partie 3: Estimation d'une nouvelle spéci􏰥cation : modèle ARMA(p,q)
+
+```{r}
+model_arima = arima(df$yield, order=c(1, 1, 0))
+model_arima
+```
+
+# Partie 4: Stabilité du modèle
+
+```{r}
+
+```
+

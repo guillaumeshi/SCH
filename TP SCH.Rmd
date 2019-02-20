@@ -99,7 +99,7 @@ summary(fit)
 
 - La statistique de Student (`t-value`) est un critère qui permet de statuer sur l'hypothèse nulle suivante : $H_0$ = {le coefficient considéré vaut 0}. On peut alors observer la p-value associée (`Pr(>|t|)`) : ici, sa valeur vaut `2.94e-08` pour $\widehat{\beta}$ et `< 2e-16` pour $\widehat{\alpha}$, elle est donc inférieure aux seuils de significativité classiques (0.1%, 1%, 5% etc.) et nous pouvons rejeter donc $H_0$ et dire que ces coefficients sont significativement différents de 0. \
   
-- Le F-test considère l'hypothèse nulle suivante : $H_0$ = {les coefficients (autre que l'`intercept`) valent tous 0}, il s'agit d'une comparaison avec le modèle constitué uniquement d'une estimation de l'`intercept`, i.e. l'ordonnée à l'origine. La p-value associée à la statistique de Fisher valant `2.944e-08`, elle est inférieure aux seuils de c'est-à-dire qu'au moins une variable n'est pas significativement différente de significativité classiques (0.1%, 1%, 5% etc.) donc on peut rejeter cette hypothèse nulle, ie que le modèle dans l'ensemble est significatif.
+- Le F-test considère l'hypothèse nulle suivante : $H_0$ = {les coefficients (autre que l'`intercept`) valent tous 0}, il s'agit d'une comparaison avec le modèle constitué uniquement d'une estimation de l'`intercept`, i.e. l'ordonnée à l'origine. La p-value associée à la statistique de Fisher valant `2.944e-08`, elle est inférieure aux seuils de significativité classiques (0.1%, 1%, 5% etc.) donc on peut rejeter l'hypothèse nulle, le modèle est donc dans l'ensemble significatif.
 
 Le coefficient de détermination $R^2$ (`R-squared = 0.1229`) et le coefficient de détermination ajusté (`Adjusted R-squared = 0.1191`) sont tous les deux très faibles, indiquant que seulement une faible part d'environ 12% de la variable en question $\frac{E_t}{P_t}$ est expliquée par le modèle, et donc que la qualité de la régression est médiocre.
 
@@ -108,7 +108,7 @@ Le coefficient de détermination $R^2$ (`R-squared = 0.1229`) et le coefficient 
 *Réaliser une étude complète des résidus estimés : tracer leur densité, étudier leur normalité et vérifier l'existence/l'absence d'autocorrélation et d'hétéroscédasticité.* \
 
 
-- Normalité des résidus du modèle : En visualisant la densité des résidus, nous voyons que celle-ci n'a pas la forme de cloche symétrique que possède une distribution normale classique. Cette idée est confirmée par le graphe quantile-quantile (qq-plot) avec : nous voyons que les points s'éloignent en queue de distribution. Le test de Shapiro-Wilk est effectué avec comme hypothèse nulle $H_0$ = {l'échantillon est issu d'une population normalement distribuée}, la p-valeur associée étant de $1.233e-07 < 0.05$, nous pouvons rejeter $H_0$ : il est probable que les données ne soient pas issues d'une population normalement distribuée.
+- Normalité des résidus du modèle : En visualisant la densité des résidus, nous voyons que celle-ci n'a pas la forme de cloche symétrique que possède une distribution normale classique. Cette idée est confirmée par le graphe quantile-quantile (qq-plot) : nous voyons que les points s'éloignent en queue de distribution. Le test de Shapiro-Wilk est effectué avec comme hypothèse nulle $H_0$ = {l'échantillon est issu d'une population normalement distribuée}, la p-valeur associée étant de $1.233e-07 < 0.05$, nous pouvons rejeter $H_0$ : il est probable que les données ne soient pas issues d'une population normalement distribuée.
 
 ```{r}
 plot(density(resid(fit)))
@@ -118,7 +118,7 @@ qqline(resid(fit))
 shapiro.test(resid(fit))
 ```
 
-- Autocorrélation des résidus : En observant la fonction d'autocorrélation sur la série des résidus, on constate qu'il y a existe une importante corrélation : la fonction d'autocorrélation prend des valeurs posittantes (>0.2 leudehors des bandes bleues donc non nulles de manière statistiquement significativur des lags allant de 1 à 14 jou5s. Cela signifie que le modèle n'est pas optimal car les résidus peuvent être utilisés pour prédire les prochains résidus : il y a de l'information qui échappe au modèle actuel.
+- Autocorrélation des résidus : on constate qu'il y a existe une importante autocorrélation des résidus : la fonction d'autocorrélation prend des valeurs importantes (en dehors des bandes bleues donc non nulles de manière statistiquement significative) pour des lags allant de 1 à 14 jours. Cela signifie que le modèle n'est pas optimal car les résidus peuvent être utilisés pour prédire les prochains résidus : il y a de l'information qui échappe au modèle actuel.
 
 
 ```{r}
@@ -126,14 +126,14 @@ plot(resid(fit), main="Evolution des résidus", xlab="Date", ylab="Résidu")
 acf(resid(fit))
 ```
 
-- Hétéroscédasticité des résidus : L'observation sur les résidus nous fait penser que ceux-ci sont hétéroscédastiques : la variance des résidus a augmenté puis diminué au cours du temps. Le test de Breusch-Pagan donne une p-valeur de `0.15$7`, on$peut rejeter l'hypothèse nulle H0 = {les données sont homoscédastiques} avec un seuil de confiance de 20%, ce qui est plutôt élevé comparé à tous les autres seuils de confiance obtenus précédemment.
+- Hétéroscédasticité des résidus : L'observation sur les résidus nous fait penser que ceux-ci sont hétéroscédastiques : la variance des résidus a augmenté puis diminué au cours du temps. Le test de Breusch-Pagan donne une p-valeur de $0.1577$, on rejeterait l'hypothèse nulle H0 = {les données sont homoscédastiques} avec un seuil de confiance de 20%, ce qui est élevé comparé à tous les autres seuils de confiance obtenus précédemment, donc il est préférable de dire qu'il est impossible de conclure sur l'homoscédasticité des résidus.
 
 
 ```{r}
 bptest(fit)
 ```
 
-Conclusion : Outre le fait que le modèle ait un coefficient de détermination faible, l'étude des résidus a montré que ces derniers ne suivent pas une distribution normale, il y a présence d'autocorrélation et d'hétéroscédasticité. Modéliser le earning yield en utilisant uniquement le taux sans risque ne permet pas d'avoir une modélisation où les hypothèses sous-jacentes de l'estimateur des MCO ne sont respectées, il faudrait améliorer le modèle.
+Conclusion : Outre le fait que le modèle ait un coefficient de détermination faible, l'étude des résidus a montré que ces derniers ne suivent pas une distribution normale, il y a présence d'autocorrélation et il est impossible de conclure sur l'homoscédasticité. Modéliser le earning yield en utilisant uniquement le taux sans risque ne permet pas d'avoir une modélisation où les hypothèses sous-jacentes de l'estimateur des MCO sont bien respectées, il faudrait améliorer le modèle.
 
 # Partie 2 - Estimation d'une nouvelle spécification et comparaison
 
@@ -142,7 +142,7 @@ Conclusion : Outre le fait que le modèle ait un coefficient de détermination f
 *Calculer le taux d'intérêt réel. Estimer par la méthode des moindres carrés ordinaires cette nouvelle spécification. Améliore-t-elle le pouvoir explicatif du modèle ? Justifier votre réponse.* \
 
 
-Le taux d'intérêt réel est calculé par en utilisant l'indice des prix à la consommation (CPI) sur 12 mois de la façon suivante : \
+Le taux d'intérêt réel est calculé en utilisant l'indice des prix à la consommation (CPI) sur 12 mois de la façon suivante : \
 $$\pi_t = 100 \frac{cpi_t - cpi_{t-12}}{cpi_{t-12}}$$
 On omet donc les 12 premiers mois pour pour la construction du modèle Fed corrigé : 
 $$\frac{E_t}{P_t} = \alpha + \beta (r_t - \pi_t) + \epsilon_t$$
@@ -178,9 +178,9 @@ Concernant le pouvoir explicatif du modèle :
 
 - Le coefficient de détermination $R^2$ est à présent de $0.39$, ce qui est une amélioration nette par rapport à précédemment où il était de $0.14$.
 
-- Toutefois, une analyse plus poussée des résidus montre que les résidus ne suivent toujours pas une distribution normale, et ne sont ni décorrélés, ni homoscédastiques. La fonction de densité présente deux pics, et les points en queue de distribution qui s'éloignent de la valeur théorique du diagramme quantile-quantile et le test de Shapiro-Wilk donnant une p-valeur très faible de $0.004569$ permettent de rejeter l'hypothèse nulle selon laquelle les données suivraient une distribution normale. La fonction d'autocorrélation montre que les résidus ne sont pas décorrélés. Le test de Breusch-Pagan donne une p-valeur de $0.7441$ donc nous ne pouvons pas conclure sur l'homoscédasticité des résidus. \
+- Toutefois, une analyse plus poussée des résidus montre que les résidus ne suivent toujours pas une distribution normale, et ne sont pas décorrélés et il est impossible de conclure sur leur homoscédasticité. La fonction de densité présente deux pics, et les points en queue de distribution qui s'éloignent de la valeur théorique du diagramme quantile-quantile et le test de Shapiro-Wilk donnant une p-valeur très faible de $0.004569$ permettent de rejeter l'hypothèse nulle selon laquelle les données suivraient une distribution normale. La fonction d'autocorrélation montre que les résidus ne sont pas décorrélés. Le test de Breusch-Pagan donne une p-valeur de $0.7441$ donc nous ne pouvons pas conclure sur l'homoscédasticité des résidus. \
 
-L'amélioration du pouvoir explicatif du modèle se traduit alors uniquement par un meilleur coefficient de détermination, mais le modèle linéaire choisi ne permet pas d'obtenir des résidus conformes aux hypothèses de modélisation du modèle MCO.
+L'amélioration du pouvoir explicatif du modèle se traduit alors uniquement par un meilleur coefficient de détermination, mais le modèle linéaire choisi ne permet toujours pas d'obtenir des résidus conformes aux hypothèses de modélisation du modèle MCO.
 
 ```{r}
 plot(resid(fit2), main="Evolution des residus", xlab="date", ylab="résidu")
